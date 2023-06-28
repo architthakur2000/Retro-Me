@@ -1,164 +1,194 @@
-#include <stdio.h> //importing input-output files, which helps us use functions like printf, scanf, fopen, fclose etc. 
-#include <stdlib.h> //importing lib that allows memory allocation, random number generation, string conversions, and program termination. 
-#include <ctype.h> //omporting lib that specifies the type of character in the code.
-#include <time.h> // import lib that gives you  acees to the currec=t time and date.
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <time.h>
+#include <SDL2/SDL.h>
+#include <math.h>
 
 
 char board[3][3];
 const char PLAYER = 'X';
 const char COMP = 'O';
 
-/**
- * The follwing 7 function prototypes. 
- */
-void resetBoard(){ // we reset it when the game is completed. We need to set all the indexes as an empty string. 
-    for(int i = 0; i<3; i++){
-        for(int j = 0; j<3; j++){
+void resetBoard() {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
             board[i][j] = ' ';
         }
     }
+}
 
-} // board is 2D array, which could be reset. 
+void drawBoard(SDL_Renderer* renderer) {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    // Draw the Tic Tac Toe board
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+    // Draw vertical lines
+    SDL_RenderDrawLine(renderer, 200, 0, 200, 600);
+    SDL_RenderDrawLine(renderer, 400, 0, 400, 600);
+
+    // Draw horizontal lines
+    SDL_RenderDrawLine(renderer, 0, 200, 600, 200);
+    SDL_RenderDrawLine(renderer, 0, 400, 600, 400);
+
+    // Draw X and O symbols for each cell based on the board array
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            int x = j * 200 + 100;
+            int y = i * 200 + 100;
+
+            if (board[i][j] == PLAYER) {
+                // Draw X symbol
+                SDL_RenderDrawLine(renderer, x - 50, y - 50, x + 50, y + 50);
+                SDL_RenderDrawLine(renderer, x + 50, y - 50, x - 50, y + 50);
+            } else if (board[i][j] == COMP) {
+                // Draw O symbol
+                int radius = 50;
+                int numSegments = 100;
+                float angleStep = 2 * 3.14159265358979323846 / numSegments;
+
+                for (int k = 0; k < numSegments; k++) {
+                    float angle = k * angleStep;
+                    int px = x + radius * cosf(angle);
+                    int py = y + radius * sinf(angle);
+                    SDL_RenderDrawPoint(renderer, px, py);
+                }
+            }
+        }
+    }
+
+    SDL_RenderPresent(renderer);
+}
+void computerMove() {
+    srand(time(0));
+    int x;
+    int y;
+
+    if (checkFreeSpaces() > 0) {
+        do {
+            x = rand() % 3;
+            y = rand() % 3;
+        } while (board[x][y] != ' ');
+
+        board[x][y] = COMP;
+    }
+}
 
 
-void printBoard(){
-    printf(" %c | %c | %c ", board[0][0], board[0][1], board[0][2]); // we have %c as he placeholder which determines the skeletonn output. It takes the values in the board[i][j]
-    printf("\n---|---|---\n");
-    printf(" %c | %c | %c ", board[1][0], board[1][1], board[1][2]);
-    printf("\n---|---|---\n");
-    printf(" %c | %c | %c ", board[2][0], board[2][1], board[2][2]);
-    printf("\n");
+void handleEvents() {
+    SDL_Event event;
 
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            // Handle quit event (e.g., exit the game)
+            return;
+        } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+            // Handle mouse button down event
+            int x = event.button.x;
+            int y = event.button.y;
 
-} // will print the 2D array which is our board.
+            // Convert mouse position to cell coordinates
+            int cellX = x / 200;
+            int cellY = y / 200;
 
+            // Check if the selected cell is valid and empty
+            if (board[cellY][cellX] == ' ') {
+                // Update the board with the player's move
+                board[cellY][cellX] = PLAYER;
 
-int checkFreeSpaces(){
+                // Perform computer's move
+                computerMove();
+            }
+        }
+    }
+}
+
+int checkFreeSpaces() {
     int freeSpaces = 9;
 
-    for(int i=0; i<3; i++){
-        for(int j=0; j<3; j++){
-            if(board[i][j] != ' '){ // if the spot we are on is currently occupied then we decrement the amount of free spaces. 
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (board[i][j] != ' ') {
                 freeSpaces--;
             }
         }
     }
     return freeSpaces;
-
-} // will check for free spaces in a 2D array. 
-
-
-void playerMove(){ //it takes the position of the player. 
-    int x;
-    int y; 
-    
-    do{
-        printf("Enter row #(1-3): ");
-        scanf("%d", &x); //Scans decimal value from the input and then stores it in an address. & operator gets the address of the variable. 
-        x--; // because user doesn't know the array starts from 0. 
-        printf("Enter column #(1-3): ");
-        scanf("%d", &y);
-        y--;
-
-        if(board[x][y] != ' '){
-            printf("Invalid move!\n");
-        }else{
-            board[x][y] = PLAYER;
-            break; //we put break here because we wanna check if the spot still has some value. If it is already filled, then we need to ask them to entera  different coordinate.
-        }
-
-    } while (board[x][y] != ' ');
-} // will account the player's input and decide where they'd like to move to. 
+}
 
 
-void computerMove(){
-    // create a seed based on random number.
-    srand(time(0)); //srand sets the seed value of a random number generator. 
-    int x;
-    int y;
-    if(checkFreeSpaces() > 0){
-        do 
-        {
-            x = rand() % 3;
-            y = rand() % 3;
-        }while (board[x][y] != ' ');
-        
-        board[x][y] = COMP;
-
-    }
-    else{
-        printf(" ");
-    }
-
-} // wil account the computer's input
-
-
-char checkWinner(){
-    //check our rows
-    for(int i=0; i<3;i++){
-        if(board[i][0] == board[i][1] && board[i][0] == board[i][2]){
+char checkWinner() {
+    // Check rows
+    for (int i = 0; i < 3; i++) {
+        if (board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
             return board[i][0];
         }
     }
-    // check our columns
-    for(int i=0; i<3;i++){
-        if(board[0][i] == board[1][i] && board[0][i] == board[2][i]){
+
+    // Check columns
+    for (int i = 0; i < 3; i++) {
+        if (board[0][i] == board[1][i] && board[0][i] == board[2][i]) {
             return board[0][i];
         }
     }
-    //check diagonal 1
-    if(board[0][0]==board[1][1] && board[0][0] == board[2][2]){
+
+    // Check diagonals
+    if (board[0][0] == board[1][1] && board[0][0] == board[2][2]) {
         return board[0][0];
     }
-    //check diagonal 2
-    if(board[0][2]==board[1][1] && board[0][2] == board[2][0]){
+
+    if (board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
         return board[0][2];
     }
+
     return ' ';
-    
-} // based on the rules, this will declare the winner (computer or the Person)
+}
 
-
-void printWinner(char winner){
-    if(winner == PLAYER){
-        printf("You win!");
+void printWinner(char winner) {
+    if (winner == PLAYER) {
+        printf("You win!\n");
+    } else if (winner == COMP) {
+        printf("You lose!\n");
+    } else {
+        printf("It's a tie!\n");
     }
-    else if(winner == COMP){
-        printf("You Lose!");
+}
+
+int main() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return 1;
     }
-    else{
-        printf("It's a tie");
+
+    SDL_Window* window = SDL_CreateWindow("Tic Tac Toe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
+    if (window == NULL) {
+        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        return 1;
     }
 
-} // will print the winner. It will take in a character so the data type is Char
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL) {
+        printf("Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+        return 1;
+    }
 
-
-int main()
-{
     char winner = ' ';
+    resetBoard();
 
-    resetBoard(); // reset the board after there is a winner. 
-    while(winner == ' ' && checkFreeSpaces() != 0){ // we do this because we have to print the board after each chance. 
-        printBoard(); // prints the board
-
-        playerMove();
+    while (winner == ' ' && checkFreeSpaces() != 0) {
+        handleEvents();
+        drawBoard(renderer);
         winner = checkWinner();
-        if(winner != ' ' || checkFreeSpaces() == 0){
-            break;
-        }
-        
-        computerMove();
-        winner = checkWinner();
-        if(winner != ' ' || checkFreeSpaces() == 0){
-            break;
-        }
-        
-
-
-
     }
-    printBoard();
+
+    drawBoard(renderer);
     printWinner(winner);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }
